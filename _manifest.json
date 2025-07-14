@@ -5,7 +5,7 @@
   "description": "适用于MaiBot 0.8.x or later 版本的戳一戳插件",
   "author": {
     "name": "Neorestim",
-    "url": "https://github.com/MaiM-with-u"
+    "url": "https://github.com/Neorestim"
   },
   "license": "GPL-v3.0-or-later",
   
@@ -13,8 +13,8 @@
     "min_version": "0.8.0",
     "max_version": "later"
   },
-  "homepage_url": "https://github.com/MaiM-with-u/maibot",
-  "repository_url": "https://github.com/MaiM-with-u/maibot",
+  "homepage_url": "https://github.com/Neorestim/poke_plugin",
+  "repository_url": "https://github.com/Neorestim/poke_plugin",
   "keywords": ["poke"],
   "categories": ["chat"],
   
