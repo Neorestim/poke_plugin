@@ -15,16 +15,20 @@ em先来试试看吧（补药喷窝啊啊啊啊啊啊啊）
 						分离私聊戳戳和群聊戳戳的请求
 						使用HTTP直接与Napcat对接
 						强制启用DEBUG模式
+      
 		<version 0.2.0>:
 						修复了无论私聊还是群聊都会私聊戳戳的BUG
 						分离positive_poke和active_poke行为
 						1的戳戳反击概率！全反击 ！战斗麦爷！爽 ！
+      
 		<version 0.2.1>:
 						关闭了DEBUG模式
 						反击概率调整到0.3
+      
 		<version 0.2.2>:
 						新增config.toml配置文件
 						迁移enabled、reaction_probability、host、port、debug配置项到config.toml
+      
 		<version 0.3.0>
 						新增config.toml版本检测
 						新增config.toml修复与更新机制
@@ -35,6 +39,7 @@ em先来试试看吧（补药喷窝啊啊啊啊啊啊啊）
 						新增混乱戳戳功能。现在回复"拍|戳|亲|抱|揉|喷|踢|捏"或者戳一戳可以触发混乱戳戳。混乱戳戳戳谁看麦爷心情，但是会优先戳最近聊天的人
 						新增chaos_poke_enabled配置项，可以控制是否启用混乱戳戳
 						新增chaos_probability配置项，可以控制混乱戳戳的触发概率
+      
 		<version 0.3.1>
 						新增配置热重载功能
 						修复配置更新功能无法正确同步版本号的问题
@@ -48,8 +53,10 @@ em先来试试看吧（补药喷窝啊啊啊啊啊啊啊）
 						修复反击戳戳概率异常问题
 						控制台新增混乱戳戳的DEBUG日志
 						优化了混乱戳戳的表现
+      
 		<version 0.3.2>
 						移除了混乱戳戳
+      
 		<version 0.3.3>
 						修复了反击戳戳相关功能，可以发动反击戳戳了！
 						将反击戳戳从command判定改为独立判定，由command触发
@@ -58,6 +65,7 @@ em先来试试看吧（补药喷窝啊啊啊啊啊啊啊）
 						新增从Napcat直接获取group_id的方式
 						修复群聊戳戳时如果选中和麦麦记录的名字不符合时会导致戳一戳报错的问题
 						<!已知BUG：config.toml部分功能失效，无法自动同步，原因不明>
+      
 		<version 0.4.0>
 		如果没有什么意外或者BUG的话，0.4.0应该就是插件的最后一个版本了。不过一旦我再有什么想法可能还会继续更新😋
 						移除反击戳戳功能，目的是优化聊天表现
@@ -65,6 +73,7 @@ em先来试试看吧（补药喷窝啊啊啊啊啊啊啊）
 						移除reply_after_intercept_probability配置项
 						修改截断逻辑为永不截断
 						<!已知问题：麦麦嘴上说着不要但是还是会很老实的在戳，系同步处理导致决策器和回复模型之间左右脑互博的结果>
+      
 		<version 0.4.1>
 						修复更新至MaiBot version 0.9版本时缺失dependencies与python_dependencies的问题
 						移除了config文件的修复逻辑
