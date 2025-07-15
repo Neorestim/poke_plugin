@@ -1,5 +1,5 @@
 <Readme.md>
-## NapCat戳一戳插件  version 0.4.1
+## NapCat戳一戳插件  version 0.4.2
 
 这个插件设计的目的是想让麦麦具有回戳功能。当前处于dev阶段，有很多BUG，也欢迎来反馈/参与改进（来参与改进！）
 
