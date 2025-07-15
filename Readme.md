@@ -78,3 +78,6 @@ em先来试试看吧（补药喷窝啊啊啊啊啊啊啊）
 						修复更新至MaiBot version 0.9版本时缺失dependencies与python_dependencies的问题
 						移除了config文件的修复逻辑
 						优化代码结构
+
+		<version 0.4.2>
+						修改了群聊匹配逻辑（变得邪门但是更稳定了）

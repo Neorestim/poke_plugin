@@ -30,7 +30,7 @@ class PokePlugin(BasePlugin):
     """QQ戳一戳功能插件，支持群聊和好友戳一戳"""
     plugin_name = "poke_plugin"
     plugin_description = "QQ戳一戳功能插件，支持群聊和好友戳一戳"
-    plugin_version = "0.4.1"
+    plugin_version = "0.4.2"
     plugin_author = "Neorestim"
     enable_plugin = True
     config_file_name = "config.toml"
@@ -101,17 +101,46 @@ class PokePlugin(BasePlugin):
         ]
 
 class ActivePokeAction(BaseAction):
+    async def napcat_get_group_member_id_by_name(self, target_name, group_id, napcat_host, napcat_port, token):
+        """
+        通过Napcat接口获取群成员列表，模糊匹配昵称或备注，返回user_id。
+        """
+        import http.client
+        import json
+        conn = http.client.HTTPConnection(napcat_host, napcat_port)
+        payload = json.dumps({"group_id": group_id, "no_cache": False})
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = token
+        try:
+            conn.request("POST", "/get_group_member_list", payload, headers)
+            res = conn.getresponse()
+            data = res.read()
+            result = data.decode("utf-8")
+            data_json = json.loads(result)
+            if data_json.get("status") == "ok" and isinstance(data_json.get("data"), list):
+                for member in data_json["data"]:
+                    nickname = member.get("nickname", "")
+                    card = member.get("card", "")
+                    remark = member.get("remark", "")
+                    if target_name in nickname or target_name in card or target_name in remark:
+                        return member.get("user_id")
+            return None
+        except Exception as e:
+            logger.error(f"[napcat_get_group_member_id_by_name] Napcat查找群成员失败: {e}")
+            return None
     action_name = "active_poke" # 主动戳一戳
     action_description = "主动戳一戳群聊或好友"
     focus_activation_type = ActionActivationType.ALWAYS
     action_parameters = {
-        "target_name": "选择你要戳的用户名称"
+        "poke_keywords": "请在这里输入你想戳的人所发送的信息内容。"
     }
     action_require = [
         "当你想要戳一戳某人时可选择调用",
         "当你想要和某人人友好互动时可选择调用",
         "当你想要提醒某人时可选择调用",
-        "提示：选取的戳一戳目标仅允许在给定的聊天内容中选取，禁止选取人设里的用户名称。戳一戳的Active不视为回复消息。无论什么时候，若与reply同时出现在选择中，应优先选择reply的action。",
+        "提示：戳一戳的Active不视为回复消息。无论什么时候，若与reply同时出现在选择中，应优先选择reply的action。keywords的内容应该全字匹配。",
+        "比如，当你收到一条消息是“Restim：笨蛋小九揉揉揉揉”时，你想戳Restim，就在poke_keywords里输入“笨蛋小九揉揉揉揉”。错误的输入会导致active执行失败，所以需要严格按照格式来。",
     ]
     associated_types = ["text"]
 
@@ -251,10 +280,7 @@ class ActivePokeAction(BaseAction):
 
     async def get_ids(self):
         """
-        通过 napcat 获取群成员列表或好友列表，根据 action_data['target_name'] 模糊匹配 nickname，返回 user_id, group_id。
-        匹配失败时主动 send_text 输出所有 nickname。
-        优先尝试 self.user_id，失败后再请求 Napcat。
-        group_id获取失败时，最后尝试通过Napcat群列表接口获取。
+        通过poke_keywords决定戳目标，获取对应目标的user_id。
         """
         group_id = None
         message = getattr(self, 'message', None)
@@ -267,30 +293,92 @@ class ActivePokeAction(BaseAction):
         if group_id is None and hasattr(self, 'group_id') and self.group_id:
             group_id = self.group_id
 
-        target_name = None
+        poke_keywords = None
         if hasattr(self, "action_data"):
-            target_name = self.action_data.get("target_name", None)
-        if not target_name:
+            poke_keywords = self.action_data.get("poke_keywords", None)
+        if not poke_keywords:
             return None, group_id
 
-        # 优先尝试 self.user_id
-        user_id = getattr(self, 'user_id', None)
-        if user_id:
-            return user_id, group_id
-
-        # 若 self.user_id 不存在，则请求 Napcat
         napcat_host = self.napcat_host
         napcat_port = int(self.napcat_port)
         token = self.token
+        user_id = None
+
+        # 通过poke_keywords匹配群聊上下文消息内容，获取发送者user_id
+        if group_id:
+            user_id = await self.napcat_get_user_id_from_group_history_by_msg(poke_keywords, group_id, napcat_host, napcat_port, token)
+            # 若未匹配到，则降级用群成员名单模糊匹配
+            if not user_id:
+                user_id = await self.napcat_get_group_member_id_by_name(poke_keywords, group_id, napcat_host, napcat_port, token)
+        else:
+            user_id = await self.napcat_get_user_id_by_name(poke_keywords, None, napcat_host, napcat_port, token)
+        # group_id 仍为空时，尝试通过Napcat群列表接口获取
+        if not group_id:
+            group_id = await self.napcat_get_group_id_by_name(poke_keywords, napcat_host, napcat_port, token)
+
+        # Napcat未查到user_id时，降级用core属性
+        if not user_id:
+            user_id = getattr(self, 'user_id', None)
+        return user_id, group_id
+
+    async def napcat_get_user_id_from_group_history_by_msg(self, poke_keywords, group_id, napcat_host, napcat_port, token):
+        """
+        通过Napcat群历史消息接口，遍历消息上下文，匹配poke_keywords于raw_message，提取发送者user_id。
+        """
+        import http.client
+        import json
+        conn = http.client.HTTPConnection(napcat_host, napcat_port)
+        payload = json.dumps({"group_id": group_id, "message_seq": 0, "count": 20, "reverseOrder": False})
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = token
         try:
-            user_id = await self.napcat_get_user_id_by_name(target_name, group_id, napcat_host, napcat_port, token)
-            # group_id 仍为空时，尝试通过Napcat群列表接口获取
-            if not group_id:
-                group_id = await self.napcat_get_group_id_by_name(target_name, napcat_host, napcat_port, token)
-            return user_id, group_id
+            conn.request("POST", "/get_group_msg_history", payload, headers)
+            res = conn.getresponse()
+            data = res.read()
+            result = data.decode("utf-8")
+            data_json = json.loads(result)
+            if data_json.get("status") == "ok" and isinstance(data_json.get("data", {}).get("messages", []), list):
+                for msg in data_json["data"]["messages"]:
+                    raw_message = msg.get("raw_message", "")
+                    sender = msg.get("sender", {})
+                    if poke_keywords in raw_message:
+                        return sender.get("user_id")
+            return None
         except Exception as e:
-            logger.error(f"[ActivePokeAction.get_ids] Napcat查找用户/群失败: {e}")
-            return None, group_id
+            logger.error(f"[napcat_get_user_id_from_group_history_by_msg] Napcat查找群历史消息失败: {e}")
+            return None
+
+    async def napcat_get_user_id_from_group_history(self, target_name, group_id, napcat_host, napcat_port, token):
+        """
+        通过Napcat群历史消息接口，遍历消息上下文，匹配target_name，提取对应user_id。
+        """
+        import http.client
+        import json
+        conn = http.client.HTTPConnection(napcat_host, napcat_port)
+        payload = json.dumps({"group_id": group_id, "message_seq": 0, "count": 20, "reverseOrder": False})
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = token
+        try:
+            conn.request("POST", "/get_group_msg_history", payload, headers)
+            res = conn.getresponse()
+            data = res.read()
+            result = data.decode("utf-8")
+            data_json = json.loads(result)
+            if data_json.get("status") == "ok" and isinstance(data_json.get("data", {}).get("messages", []), list):
+                for msg in data_json["data"]["messages"]:
+                    # 支持昵称、card、raw_message等模糊匹配
+                    sender = msg.get("sender", {})
+                    nickname = sender.get("nickname", "")
+                    card = sender.get("card", "")
+                    raw_message = msg.get("raw_message", "")
+                    if (target_name in nickname) or (target_name in card) or (target_name in raw_message):
+                        return sender.get("user_id")
+            return None
+        except Exception as e:
+            logger.error(f"[napcat_get_user_id_from_group_history] Napcat查找群历史消息失败: {e}")
+            return None
 
     async def execute(self) -> Tuple[bool, str]:
         # 每次主动戳戳前检测并reload config
