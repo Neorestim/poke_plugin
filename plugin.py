@@ -34,8 +34,8 @@ class PokePlugin(BasePlugin):
     plugin_author = "Neorestim"
     enable_plugin = True
     config_file_name = "config.toml"
-    dependencies = ["core_actions"]
-    python_dependencies = ["requests", "toml"]
+    dependencies = []
+    python_dependencies = []
     config_section_descriptions = {
         "plugin": "插件启用配置",
         "poke": "戳戳功能配置"
