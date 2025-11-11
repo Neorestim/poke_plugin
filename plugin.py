@@ -30,12 +30,12 @@ class PokePlugin(BasePlugin):
     """QQ戳一戳功能插件，支持群聊和好友戳一戳"""
     plugin_name = "poke_plugin"
     plugin_description = "QQ戳一戳功能插件，支持群聊和好友戳一戳"
-    plugin_version = "0.4.2"
+    plugin_version = "0.4.3"
     plugin_author = "Neorestim"
     enable_plugin = True
     config_file_name = "config.toml"
-    dependencies = []
-    python_dependencies = []
+    dependencies = ["core_actions"]
+    python_dependencies = ["requests", "toml"]
     config_section_descriptions = {
         "plugin": "插件启用配置",
         "poke": "戳戳功能配置"
@@ -132,6 +132,8 @@ class ActivePokeAction(BaseAction):
     action_name = "active_poke" # 主动戳一戳
     action_description = "主动戳一戳群聊或好友"
     focus_activation_type = ActionActivationType.ALWAYS
+    # 兼容 BaseAction 期望的属性名
+    activation_type = focus_activation_type
     action_parameters = {
         "poke_keywords": "请在这里输入你想戳的人所发送的信息内容。"
     }
